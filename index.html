@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AMA1751 Linear Algebra | Topic 6 - Inner Product (Dr. Charles Lee)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            polyu: {
+              DEFAULT: '#A02337',
+              dark: '#7A1828',
+              light: '#F9ECEE',
+              accent: '#D4AF37'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- KaTeX for Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Plotly.js for 2D/3D Subspace & Vector Visualizations -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.5rem 0; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .code-block { font-family: 'Fira Code', 'Courier New', monospace; }
+    canvas { touch-action: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+
+  <!-- LEFT SIDEBAR NAVIGATION -->
+  <aside id="sidebar" class="w-80 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 select-none z-20">
+    <!-- PolyU / Course Header -->
+    <div class="bg-polyu text-white p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider bg-polyu-dark px-2.5 py-1 rounded">AMA1751 (2026/27 Sem 1)</span>
+        <span class="text-xs opacity-80">PolyU AMA</span>
+      </div>
+      <h1 class="text-lg font-bold mt-2 leading-snug">Topic 6: Inner Product</h1>
+      <p class="text-xs text-rose-100 mt-1">Lecturer: Dr. LEE Kei Fung, Charles</p>
+    </div>
+
+    <!-- Student Profile & Progress Bar -->
+    <div class="p-4 bg-slate-100 border-b border-slate-200">
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
+        <span>Course Progress</span>
+        <span id="progress-text">1 / 10 Modules</span>
+      </div>
+      <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+        <div id="progress-bar" class="bg-polyu h-full transition-all duration-300" style="width: 10%"></div>
+      </div>
+      <div class="mt-3 flex items-center gap-2">
+        <input id="student-id-input" type="text" placeholder="Enter Student ID (e.g. 24012345D)" 
+          class="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 focus:outline-none focus:border-polyu bg-white"
+          onchange="App.saveStudentProfile()" />
+      </div>
+    </div>
+
+    <!-- Navigation List (Modules 1 to 10) -->
+    <nav class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1" id="nav-list">
+      <!-- Populated dynamically by App.renderNav() -->
+    </nav>
+
+    <!-- Footer Info -->
+    <div class="p-3 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between bg-slate-50">
+      <span>Slides P. 1 – 55</span>
+      <button onclick="App.resetProgress()" class="text-rose-700 hover:underline font-medium">Reset Data</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <div class="flex-1 flex flex-col h-full overflow-hidden">
+    <!-- Top Header Bar -->
+    <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <span id="current-module-badge" class="bg-polyu-light text-polyu font-bold text-xs px-3 py-1 rounded-full">Module 1</span>
+        <h2 id="current-module-title" class="text-lg font-bold text-slate-800">Inner Product and Norm in ℝⁿ</h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="current-slides-ref" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">
+          Lecture Notes: P. 2 – 4 / 55
+        </span>
+        <button onclick="App. markCurrentCompleted()" id="mark-complete-btn"
+          class="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Mark Completed</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Module Viewport -->
+    <main id="module-viewport" class="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8">
+      <!-- Module content injected here -->
+    </main>
+
+    <!-- Bottom Pagination Bar -->
+    <footer class="h-14 bg-white border-t border-slate-200 px-6 flex items-center justify-between shrink-0">
+      <button id="prev-btn" onclick="App.navigate(-1)" class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-polyu disabled:opacity-40">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Previous Topic
+      </button>
+      <div class="text-xs text-slate-400">AMA1751 Interactive Hub • Hosted on GitHub Pages</div>
+      <button id="next-btn" onclick="App.navigate(1)" class="flex items-center gap-2 text-sm font-semibold text-polyu hover:text-polyu-dark disabled:opacity-40">
+        Next Topic <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </button>
+    </footer>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION CORE & LINEAR ALGEBRA ENGINE                              -->
+  <!-- ===================================================================== -->
+  <script>
+    /**
+     * Core Linear Algebra Utility Library (Client-Side)
+     */
+    const LA = {
+      dot: (x, y) => x.reduce((sum, xi, i) => sum + xi * y[i], 0),
+      normSq: (x) => LA.dot(x, x),
+      norm: (x) => Math.sqrt(LA.normSq(x)),
+      scale: (x, c) => x.map(xi => xi * c),
+      add: (x, y) => x.map((xi, i) => xi + y[i]),
+      sub: (x, y) => x.map((xi, i) => xi - y[i]),
+      proj: (x, y) => {
+        const yy = LA.dot(y, y);
+        if (yy === 0) return y.map(() => 0);
+        return LA.scale(y, LA.dot(x, y) / yy);
+      },
+      // Greatest Common Divisor for exact fraction formatting
+      gcd: (a, b) => {
+        a = Math.abs(Math.round(a));
+        b = Math.abs(Math.round(b));
+        while (b) { [a, b] = [b, a % b]; }
+        return a || 1;
+      },
+      // Format vector as LaTeX column matrix
+      toLatexVec: (v, decimals = 2) => {
+        const rows = v.map(val => Number.isInteger(val) ? val : Number(val.toFixed(decimals))).join(' \\\\ ');
+        return `\\begin{bmatrix} ${rows} \\end{bmatrix}`;
+      },
+      // Seeded random generator for reproducible quiz parameters
+      seededRandom: (seedStr) => {
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < seedStr.length; i++) {
+          h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+        }
+        return function() {
+          h += h << 13; h ^= h >>> 7;
+          h += h << 3;  h ^= h >>> 17;
+          return ((h += h << 5) >>> 0) / 4294967296;
+        };
+      }
+    };
+
+    /**
+     * Curriculum Metadata & Modules Registry (Slides 1 - 55)
+     */
+    const MODULES = [
+      { id: 1, title: "1. Inner Product & Norm in ℝⁿ", slides: "P. 2 – 4", status: "ready" },
+      { id: 2, title: "2. Orthogonality", slides: "P. 5 – 9", status: "pending" },
+      { id: 3, title: "3. Orthogonal Subspace", slides: "P. 10 – 14", status: "pending" },
+      { id: 4, title: "4. Projection", slides: "P. 15 – 16", status: "pending" },
+      { id: 5, title: "5. Orthonormal Basis", slides: "P. 17 – 24, 34", status: "pending" },
+      { id: 6, title: "6. Gram-Schmidt Algorithm", slides: "P. 25 – 33", status: "pending" },
+      { id: 7, title: "7. Least Squares Solution", slides: "P. 35 – 43", status: "pending" },
+      { id: 8, title: "8. Symmetric Matrices", slides: "P. 44 – 47", status: "pending" },
+      { id: 9, title: "9. The Spectral Theorem", slides: "P. 48 – 55", status: "pending" },
+      { id: 10, title: "10. Overall Parameterized Quiz", slides: "All Topic 6", status: "pending" }
+    ];
+
+    /**
+     * Module Content Renderers
+     */
+    const ModuleRenderers = {
+      // ===================================================================
+      // MODULE 1: INNER PRODUCT AND NORM IN R^n (Slides P. 2 - 4)
+      // ===================================================================
+      1: function() {
+        return `
+          <!-- Section 1: Learning Overview & Definitions (Slide P. 2) -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-start justify-between border-b border-slate-100 pb-4 mb-5">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-polyu">Slide P. 2 / 55</span>
+                <h3 class="text-xl font-bold text-slate-800 mt-1">Definitions: Inner Product, Norm, and Unit Vector</h3>
+              </div>
+              <span class="bg-slate-100 text-slate-600 text-xs px-3 py-1 rounded-full font-medium">Foundation</span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Inner Product Box -->
+              <div class="bg-slate-50 rounded-lg p-5 border border-slate-200">
+                <h4 class="font-bold text-polyu text-base mb-2">1. Inner Product (Scalar Product)</h4>
+                <p class="text-sm text-slate-600 mb-3">
+                  Given two column vectors $\\mathbf{x} = \\begin{bmatrix} x_1 \\\\ x_2 \\\\ \\vdots \\\\ x_n \\end{bmatrix}$ and $\\mathbf{y} = \\begin{bmatrix} y_1 \\\\ y_2 \\\\ \\vdots \\\\ y_n \\end{bmatrix}$ in $\\mathbb{R}^n$, the <strong>inner product</strong> of $\\mathbf{x}$ and $\\mathbf{y}$ is defined by:
+                </p>
+                <div class="bg-white p-3 rounded border border-slate-200 text-center text-sm">
+                  $$\\langle \\mathbf{x}, \\mathbf{y} \\rangle = \\mathbf{y}^T \\mathbf{x} = \\begin{bmatrix} y_1 & y_2 & \\cdots & y_n \\end{bmatrix} \\begin{bmatrix} x_1 \\\\ x_2 \\\\ \\vdots \\\\ x_n \\end{bmatrix} = x_1y_1 + x_2y_2 + \\cdots + x_ny_n$$
+                </div>
+              </div>
+
+              <!-- Norm & Unit Vector Box -->
+              <div class="bg-slate-50 rounded-lg p-5 border border-slate-200 flex flex-col justify-between">
+                <div>
+                  <h4 class="font-bold text-polyu text-base mb-2">2. Norm (Length) & Unit Vector</h4>
+                  <p class="text-sm text-slate-600 mb-2">
+                    The <strong>norm</strong> (or Euclidean length) of a vector $\\mathbf{x} \\in \\mathbb{R}^n$ is defined by:
+                  </p>
+                  <div class="bg-white p-3 rounded border border-slate-200 text-center text-sm mb-3">
+                    $$\\|\\mathbf{x}\\| = \\sqrt{\\langle \\mathbf{x}, \\mathbf{x} \\rangle} = \\sqrt{x_1^2 + x_2^2 + \\cdots + x_n^2}$$
+                  </div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded p-3 text-xs text-amber-900">
+                  <strong>Unit Vector Normalization:</strong> A vector $\\mathbf{u}$ is called a <strong>unit vector</strong> if $\\|\\mathbf{u}\\| = 1$. For any nonzero vector $\\mathbf{x} \\neq \\mathbf{0}$, the normalized vector $\\mathbf{z} = \\frac{1}{\\|\\mathbf{x}\\|}\\mathbf{x}$ is always a unit vector ($\\|\\mathbf{z}\\| = 1$).
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Properties & Interactive Geometric Lab (Slide P. 4) -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="border-b border-slate-100 pb-4 mb-5">
+              <span class="text-xs font-bold uppercase tracking-wider text-polyu">Slide P. 4 / 55 • Interactive Lab</span>
+              <h3 class="text-xl font-bold text-slate-800 mt-1">Properties of Inner Product & Norm (2D Geometric Explorer)</h3>
+              <p class="text-sm text-slate-600 mt-1">
+                Adjust the coordinates of $\\mathbf{x}$ and $\\mathbf{y}$ using the sliders (or drag the vector arrowheads directly on the canvas) to explore how the angle determines the sign of $\\langle \\mathbf{x}, \\mathbf{y} \\rangle$ and verify the <strong>Triangle Inequality</strong> $\\|\\mathbf{x} + \\mathbf{y}\\| \\le \\|\\mathbf{x}\\| + \\|\\mathbf{y}\\|$.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <!-- Left: Theory & Live Readout (5 cols) -->
+              <div class="lg:col-span-5 space-y-4">
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm space-y-2">
+                  <h4 class="font-bold text-slate-800 border-b pb-1">Properties of Inner Product ($\\forall \\mathbf{x},\\mathbf{y},\\mathbf{w} \\in \\mathbb{R}^n, c \\in \\mathbb{R}$)</h4>
+                  <ol class="list-decimal list-inside space-y-1 text-slate-700 text-xs">
+                    <li><strong>Symmetry:</strong> $\\langle \\mathbf{x}, \\mathbf{y} \\rangle = \\langle \\mathbf{y}, \\mathbf{x} \\rangle$</li>
+                    <li><strong>Additivity:</strong> $\\langle \\mathbf{x} + \\mathbf{y}, \\mathbf{w} \\rangle = \\langle \\mathbf{x}, \\mathbf{w} \\rangle + \\langle \\mathbf{y}, \\mathbf{w} \\rangle$</li>
+                    <li><strong>Homogeneity:</strong> $\\langle c\\mathbf{x}, \\mathbf{y} \\rangle = c\\langle \\mathbf{x}, \\mathbf{y} \\rangle$</li>
+                    <li><strong>Positivity:</strong> $\\langle \\mathbf{x}, \\mathbf{x} \\rangle \\ge 0$, and $\\langle \\mathbf{x}, \\mathbf{x} \\rangle = 0 \\iff \\mathbf{x} = \\mathbf{0}$</li>
+                  </ol>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm space-y-2">
+                  <h4 class="font-bold text-slate-800 border-b pb-1">Properties of Norm ($\\forall \\mathbf{x},\\mathbf{y} \\in \\mathbb{R}^n, c \\in \\mathbb{R}$)</h4>
+                  <ol class="list-decimal list-inside space-y-1 text-slate-700 text-xs">
+                    <li><strong>Scalar Scaling:</strong> $\\|c\\mathbf{x}\\| = |c| \\cdot \\|\\mathbf{x}\\|$</li>
+                    <li><strong>Triangle Inequality:</strong> <span class="text-rose-600 font-semibold">$\\|\\mathbf{x} + \\mathbf{y}\\| \\le \\|\\mathbf{x}\\| + \\|\\mathbf{y}\\|$</span></li>
+                    <li><strong>Positivity:</strong> $\\|\\mathbf{x}\\| \\ge 0$, and $\\|\\mathbf{x}\\| = 0 \\iff \\mathbf{x} = \\mathbf{0}$</li>
+                  </ol>
+                </div>
+
+                <!-- Sliders for x and y -->
+                <div class="bg-white p-4 rounded-lg border border-slate-200 space-y-3">
+                  <div>
+                    <div class="flex justify-between text-xs font-bold text-blue-700 mb-1">
+                      <span>Vector x = (<span id="m1-x1-val">3</span>, <span id="m1-x2-val">1</span>)ᵀ</span>
+                      <span>‖x‖ = <span id="m1-norm-x">3.16</span></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input type="range" id="m1-x1" min="-4" max="4" step="0.5" value="3" oninput="M1.updateCanvas()" class="accent-blue-600" />
+                      <input type="range" id="m1-x2" min="-4" max="4" step="0.5" value="1" oninput="M1.updateCanvas()" class="accent-blue-600" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="flex justify-between text-xs font-bold text-emerald-700 mb-1">
+                      <span>Vector y = (<span id="m1-y1-val">1</span>, <span id="m1-y2-val">3</span>)ᵀ</span>
+                      <span>‖y‖ = <span id="m1-norm-y">3.16</span></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input type="range" id="m1-y1" min="-4" max="4" step="0.5" value="1" oninput="M1.updateCanvas()" class="accent-emerald-600" />
+                      <input type="range" id="m1-y2" min="-4" max="4" step="0.5" value="3" oninput="M1.updateCanvas()" class="accent-emerald-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Interactive Canvas & Live Mathematical Diagnostics (7 cols) -->
+              <div class="lg:col-span-7 flex flex-col items-center">
+                <div class="relative bg-slate-900 rounded-xl overflow-hidden shadow-inner border border-slate-700 w-full flex justify-center">
+                  <canvas id="m1-canvas" width="520" height="340" class="cursor-grab active:cursor-grabbing"></canvas>
+                  <div class="absolute top-3 left-3 bg-slate-800/90 text-slate-200 text-xs px-3 py-1.5 rounded border border-slate-600">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-400 mr-1"></span> <b>x</b>
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 ml-2 mr-1"></span> <b>y</b>
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-400 ml-2 mr-1"></span> <b>x + y</b>
+                  </div>
+                </div>
+
+                <!-- Live Metrics Cards -->
+                <div class="grid grid-cols-2 gap-4 w-full mt-4">
+                  <div class="p-3.5 rounded-lg border bg-slate-50" id="m1-ip-card">
+                    <div class="text-xs text-slate-500 font-semibold uppercase">Inner Product ⟨x, y⟩ & Angle</div>
+                    <div class="text-lg font-bold text-slate-800 mt-1" id="m1-ip-readout">⟨x, y⟩ = 6.00 (Acute: 53.1°)</div>
+                    <div class="text-xs text-slate-600 mt-0.5" id="m1-ip-desc">Since ⟨x, y⟩ > 0, the angle θ between x and y is acute.</div>
+                  </div>
+                  <div class="p-3.5 rounded-lg border bg-slate-50 border-slate-200">
+                    <div class="text-xs text-slate-500 font-semibold uppercase">Triangle Inequality Check</div>
+                    <div class="text-sm font-bold text-slate-800 mt-1" id="m1-tri-readout">‖x + y‖ = 5.66 ≤ ‖x‖ + ‖y‖ = 6.32</div>
+                    <div class="text-xs text-emerald-700 font-medium mt-1" id="m1-tri-diff">Slack: (‖x‖ + ‖y‖) − ‖x + y‖ = 0.67 ≥ 0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Worked Example (Slide P. 3) + Interactive n-D Calculator -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Worked Example from Slide 3 (7 cols) -->
+            <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <span class="text-xs font-bold uppercase tracking-wider text-polyu">Slide P. 3 / 55 • Worked Example</span>
+              <h3 class="text-lg font-bold text-slate-800 mt-1 mb-3">Example: Computing $\\langle \\mathbf{x}, \\mathbf{y} \\rangle$, Norms, and Unit Vector in $\\mathbb{R}^5$</h3>
+              
+              <div class="text-sm text-slate-700 space-y-3">
+                <p>
+                  For $\\mathbf{x} = \\begin{bmatrix} 1 & 2 & 3 & 4 & 5 \\end{bmatrix}^T$ and $\\mathbf{y} = \\begin{bmatrix} 3 & -1 & 2 & 1 & -1 \\end{bmatrix}^T$ in $\\mathbb{R}^5$:
+                </p>
+                <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 overflow-x-auto text-xs">
+                  $$\\begin{aligned}
+                  \\langle \\mathbf{x}, \\mathbf{y} \\rangle &= \\mathbf{y}^T\\mathbf{x} = \\begin{bmatrix} 3 & -1 & 2 & 1 & -1 \\end{bmatrix} \\begin{bmatrix} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\\\ 5 \\end{bmatrix} \\\\
+                  &= 1\\cdot 3 + 2\\cdot(-1) + 3\\cdot 2 + 4\\cdot 1 + 5\\cdot(-1) = 3 - 2 + 6 + 4 - 5 = \\mathbf{6}
+                  \\end{aligned}$$
+                </div>
+                <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 overflow-x-auto text-xs">
+                  $$\\begin{aligned}
+                  \\|\\mathbf{x}\\| &= \\left(1^2 + 2^2 + 3^2 + 4^2 + 5^2\\right)^{\\frac{1}{2}} = \\sqrt{1 + 4 + 9 + 16 + 25} = \\mathbf{\\sqrt{55}} \\approx 7.4162 \\\\
+                  \\|\\mathbf{y}\\| &= \\left(3^2 + (-1)^2 + 2^2 + 1^2 + (-1)^2\\right)^{\\frac{1}{2}} = \\sqrt{9 + 1 + 4 + 1 + 1} = \\sqrt{16} = \\mathbf{4}
+                  \\end{aligned}$$
+                </div>
+                <div class="bg-emerald-50 p-3.5 rounded-lg border border-emerald-200 text-xs text-emerald-950">
+                  <strong>Constructing a Unit Vector:</strong> Let $\\mathbf{z} = \\frac{1}{\\|\\mathbf{x}\\|}\\mathbf{x} = \\frac{1}{\\sqrt{55}}\\mathbf{x} = \\begin{bmatrix} \\frac{\\sqrt{55}}{55} & \\frac{2\\sqrt{55}}{55} & \\frac{3\\sqrt{55}}{55} & \\frac{4\\sqrt{55}}{55} & \\frac{\\sqrt{55}}{11} \\end{bmatrix}^T$. Then $\\|\\mathbf{z}\\| = \\frac{1}{\\sqrt{55}}\\|\\mathbf{x}\\| = 1$.
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive n-D Sandbox + SymPy Code (5 cols) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+              <!-- Custom n-D Sandbox -->
+              <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h4 class="font-bold text-slate-800 text-sm mb-2 flex items-center justify-between">
+                  <span>Interactive $\\mathbb{R}^n$ Inner Product & Norm Calculator</span>
+                  <button onclick="M1.loadSlide3Example()" class="text-xs text-polyu hover:underline">Reset to Slide 3</button>
+                </h4>
+                <p class="text-xs text-slate-500 mb-3">Enter comma-separated components for $\\mathbf{x}$ and $\\mathbf{y}$ of any dimension $n$:</p>
+                <div class="space-y-2.5 text-xs">
+                  <div>
+                    <label class="font-semibold text-slate-600 block mb-1">Vector x:</label>
+                    <input id="m1-nd-x" type="text" value="1, 2, 3, 4, 5" oninput="M1.calcND()"
+                      class="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:border-polyu font-mono" />
+                  </div>
+                  <div>
+                    <label class="font-semibold text-slate-600 block mb-1">Vector y:</label>
+                    <input id="m1-nd-y" type="text" value="3, -1, 2, 1, -1" oninput="M1.calcND()"
+                      class="w-full px-3 py-1.5 border border-slate-300 rounded focus:outline-none focus:border-polyu font-mono" />
+                  </div>
+                  <div id="m1-nd-result" class="bg-slate-50 p-3 rounded border border-slate-200 space-y-1 text-slate-700 mt-2">
+                    <!-- Dynamic readout -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- SymPy Code Box from Slide 3 -->
+              <div class="bg-slate-900 text-slate-100 rounded-xl shadow-sm p-5 text-xs code-block">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+                  <span class="text-amber-400 font-bold">Python / SymPy Verification (Slide P. 3)</span>
+                  <button onclick="App.copyCode('m1-sympy-code')" class="text-slate-300 hover:text-white bg-slate-800 px-2 py-1 rounded">Copy</button>
+                </div>
+                <pre id="m1-sympy-code" class="overflow-x-auto leading-relaxed"><span class="text-sky-400">import</span> sympy <span class="text-sky-400">as</span> sp
+
+x = sp.Matrix([[1, 2, 3, 4, 5]]).T
+y = sp.Matrix([[3, -1, 2, 1, -1]]).T
+
+<span class="text-slate-400"># [3]: Inner product of x and y</span>
+display(y.T @ x)      <span class="text-emerald-400"># Output: Matrix([[6]])</span>
+
+<span class="text-slate-400"># [4]-[5]: Norm of x and y</span>
+display(x.norm())     <span class="text-emerald-400"># Output: sqrt(55)</span>
+display(y.norm())     <span class="text-emerald-400"># Output: 4</span>
+
+<span class="text-slate-400"># [6]: Unit vector z = x / ||x||</span>
+z = x / x.norm()</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Quick Concept Check for Module 1 -->
+          <div class="bg-polyu-light/60 rounded-xl border border-rose-200 p-6">
+            <h4 class="font-bold text-polyu text-base mb-2 flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-5 h-5"></i>
+              Module 1 Concept Check
+            </h4>
+            <p class="text-sm text-slate-700 mb-3">
+              Suppose $\\mathbf{x} = \\begin{bmatrix} 2 & -3 & 6 \\end{bmatrix}^T \\in \\mathbb{R}^3$. What is the norm $\\|\\mathbf{x}\\|$, and what is the third component of the unit vector $\\mathbf{u} = \\frac{1}{\\|\\mathbf{x}\\|}\\mathbf{x}$?
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <button onclick="M1.checkQuiz(1)" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm hover:border-polyu transition">
+                A) $\\|\\mathbf{x}\\| = 49$, $u_3 = \\frac{6}{49}$
+              </button>
+              <button onclick="M1.checkQuiz(2)" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm hover:border-polyu transition">
+                B) $\\|\\mathbf{x}\\| = 7$, $u_3 = \\frac{6}{7}$
+              </button>
+              <button onclick="M1.checkQuiz(3)" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm hover:border-polyu transition">
+                C) $\\|\\mathbf{x}\\| = \\sqrt{31}$, $u_3 = \\frac{6}{\\sqrt{31}}$
+              </button>
+            </div>
+            <div id="m1-quiz-feedback" class="hidden mt-3 p-3 rounded-lg text-xs font-medium"></div>
+          </div>
+        `;
+      }
+    };
+
+    /**
+     * Module 1 Interactive Controller
+     */
+    const M1 = {
+      init: function() {
+        this.updateCanvas();
+        this.calcND();
+        this.bindCanvasDrag();
+      },
+      loadSlide3Example: function() {
+        document.getElementById('m1-nd-x').value = '1, 2, 3, 4, 5';
+        document.getElementById('m1-nd-y').value = '3, -1, 2, 1, -1';
+        this.calcND();
+      },
+      calcND: function() {
+        const xStr = document.getElementById('m1-nd-x').value;
+        const yStr = document.getElementById('m1-nd-y').value;
+        const x = xStr.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        const y = yStr.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        const resEl = document.getElementById('m1-nd-result');
+
+        if (x.length === 0 || x.length !== y.length) {
+          resEl.innerHTML = `<span class="text-rose-600 font-semibold">Please enter two valid vectors of the same dimension (currently dim(x)=${x.length}, dim(y)=${y.length}).</span>`;
+          return;
+        }
+        const ip = LA.dot(x, y);
+        const nxSq = LA.normSq(x);
+        const nySq = LA.normSq(y);
+        const nx = Math.sqrt(nxSq);
+        const ny = Math.sqrt(nySq);
+        const z = nx > 0 ? x.map(xi => (xi / nx).toFixed(3)).join(', ') : 'Undefined (zero vector)';
+
+        resEl.innerHTML = `
+          <div><strong>Dimension:</strong> $\\mathbb{R}^{${x.length}}$</div>
+          <div><strong>Inner Product $\\langle \\mathbf{x}, \\mathbf{y} \\rangle$:</strong> <span class="text-polyu font-bold">${ip}</span></div>
+          <div><strong>Norm $\\|\\mathbf{x}\\|$:</strong> $\\sqrt{${nxSq}} \\approx ${nx.toFixed(4)}$ &nbsp;|&nbsp; <strong>Norm $\\|\\mathbf{y}\\|$:</strong> $\\sqrt{${nySq}} \\approx ${ny.toFixed(4)}$</div>
+          <div><strong>Unit Vector $\\mathbf{z} = \\mathbf{x}/\\|\\mathbf{x}\\|$:</strong> $[${z}]^T$</div>
+        `;
+        App.renderMath(resEl);
+      },
+      updateCanvas: function() {
+        const canvas = document.getElementById('m1-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const x1 = parseFloat(document.getElementById('m1-x1').value);
+        const x2 = parseFloat(document.getElementById('m1-x2').value);
+        const y1 = parseFloat(document.getElementById('m1-y1').value);
+        const y2 = parseFloat(document.getElementById('m1-y2').value);
+
+        document.getElementById('m1-x1-val').textContent = x1;
+        document.getElementById('m1-x2-val').textContent = x2;
+        document.getElementById('m1-y1-val').textContent = y1;
+        document.getElementById('m1-y2-val').textContent = y2;
+
+        const x = [x1, x2], y = [y1, y2], sum = [x1 + y1, x2 + y2];
+        const nx = LA.norm(x), ny = LA.norm(y), nSum = LA.norm(sum);
+        const ip = LA.dot(x, y);
+
+        document.getElementById('m1-norm-x').textContent = nx.toFixed(2);
+        document.getElementById('m1-norm-y').textContent = ny.toFixed(2);
+
+        // Angle & Inner Product card
+        let angleDeg = 0;
+        if (nx > 0 && ny > 0) {
+          const cosTheta = Math.max(-1, Math.min(1, ip / (nx * ny)));
+          angleDeg = (Math.acos(cosTheta) * 180 / Math.PI);
+        }
+        const ipReadout = document.getElementById('m1-ip-readout');
+        const ipDesc = document.getElementById('m1-ip-desc');
+        const orient = ip > 1e-6 ? 'Acute' : (ip < -1e-6 ? 'Obtuse' : 'Orthogonal');
+        ipReadout.textContent = `⟨x, y⟩ = ${ip.toFixed(2)} (${orient}: ${angleDeg.toFixed(1)}°)`;
+        ipDesc.textContent = ip > 1e-6 
+          ? 'Since ⟨x, y⟩ > 0, the angle between x and y is less than 90°.'
+          : (ip < -1e-6 ? 'Since ⟨x, y⟩ < 0, the angle between x and y is greater than 90°.' : '⟨x, y⟩ = 0: Vectors x and y are orthogonal (90°).');
+
+        // Triangle Inequality card
+        document.getElementById('m1-tri-readout').textContent = `‖x + y‖ = ${nSum.toFixed(2)}  ≤  ‖x‖ + ‖y‖ = ${(nx + ny).toFixed(2)}`;
+        document.getElementById('m1-tri-diff').textContent = `Slack: (‖x‖ + ‖y‖) − ‖x + y‖ = ${Math.max(0, nx + ny - nSum).toFixed(3)} ≥ 0`;
+
+        // Draw Coordinate Grid
+        const W = canvas.width, H = canvas.height;
+        const ox = W / 2, oy = H / 2, scale = 34;
+        ctx.clearRect(0, 0, W, H);
+
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        for (let gx = -7; gx <= 7; gx++) {
+          ctx.beginPath(); ctx.moveTo(ox + gx * scale, 0); ctx.lineTo(ox + gx * scale, H); ctx.stroke();
+        }
+        for (let gy = -5; gy <= 5; gy++) {
+          ctx.beginPath(); ctx.moveTo(0, oy + gy * scale); ctx.lineTo(W, oy + gy * scale); ctx.stroke();
+        }
+
+        // Axes
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+
+        // Helper to draw arrow
+        const drawVec = (fromX, fromY, toX, toY, color, label, dashed = false) => {
+          const sx = ox + fromX * scale, sy = oy - fromY * scale;
+          const ex = ox + toX * scale, ey = oy - toY * scale;
+          const angle = Math.atan2(ey - sy, ex - sx);
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.fillStyle = color;
+          ctx.lineWidth = dashed ? 1.8 : 2.8;
+          if (dashed) ctx.setLineDash([5, 4]);
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+          if (!dashed && Math.hypot(ex - sx, ey - sy) > 5) {
+            ctx.beginPath();
+            ctx.moveTo(ex, ey);
+            ctx.lineTo(ex - 10 * Math.cos(angle - 0.35), ey - 10 * Math.sin(angle - 0.35));
+            ctx.lineTo(ex - 10 * Math.cos(angle + 0.35), ey - 10 * Math.sin(angle + 0.35));
+            ctx.closePath();
+            ctx.fill();
+          }
+          if (label) {
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.fillText(label, ex + 8 * Math.cos(angle), ey + 8 * Math.sin(angle));
+          }
+          ctx.restore();
+        };
+
+        // Draw parallelogram/triangle shifted y from tip of x (matching Slide 4 bottom-right diagram)
+        drawVec(x1, x2, sum[0], sum[1], '#34d39988', '', true);
+        drawVec(0, 0, x1, x2, '#60a5fa', 'x');
+        drawVec(0, 0, y1, y2, '#34d399', 'y');
+        drawVec(0, 0, sum[0], sum[1], '#fb7185', 'x + y');
+      },
+      bindCanvasDrag: function() {
+        const canvas = document.getElementById('m1-canvas');
+        if (!canvas) return;
+        let dragging = null;
+        const scale = 34;
+
+        const getCoords = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+          const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+          return [(cx - canvas.width / 2) / scale, (canvas.height / 2 - cy) / scale];
+        };
+
+        canvas.addEventListener('pointerdown', (e) => {
+          const [mx, my] = getCoords(e);
+          const x1 = parseFloat(document.getElementById('m1-x1').value);
+          const x2 = parseFloat(document.getElementById('m1-x2').value);
+          const y1 = parseFloat(document.getElementById('m1-y1').value);
+          const y2 = parseFloat(document.getElementById('m1-y2').value);
+          if (Math.hypot(mx - x1, my - x2) < 0.6) dragging = 'x';
+          else if (Math.hypot(mx - y1, my - y2) < 0.6) dragging = 'y';
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          const [mx, my] = getCoords(e);
+          const clamp = v => Math.max(-4, Math.min(4, Math.round(v * 2) / 2));
+          if (dragging === 'x') {
+            document.getElementById('m1-x1').value = clamp(mx);
+            document.getElementById('m1-x2').value = clamp(my);
+          } else {
+            document.getElementById('m1-y1').value = clamp(mx);
+            document.getElementById('m1-y2').value = clamp(my);
+          }
+          this.updateCanvas();
+        });
+
+        window.addEventListener('pointerup', () => { dragging = null; });
+      },
+      checkQuiz: function(choice) {
+        const fb = document.getElementById('m1-quiz-feedback');
+        fb.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-900', 'bg-rose-100', 'text-rose-900');
+        if (choice === 2) {
+          fb.classList.add('bg-emerald-100', 'text-emerald-900');
+          fb.innerHTML = '✓ <strong>Correct!</strong> $\\|\\mathbf{x}\\| = \\sqrt{2^2 + (-3)^2 + 6^2} = \\sqrt{4 + 9 + 36} = \\sqrt{49} = 7$, so the third component of $\\mathbf{u} = \\frac{1}{7}\\mathbf{x}$ is $\\frac{6}{7}$.';
+        } else {
+          fb.classList.add('bg-rose-100', 'text-rose-900');
+          fb.innerHTML = '✗ <strong>Not quite.</strong> Remember to square each entry (including $(-3)^2 = +9$) and take the square root: $\\|\\mathbf{x}\\| = \\sqrt{2^2 + (-3)^2 + 6^2} = \\sqrt{49} = 7$.';
+        }
+        App.renderMath(fb);
+      }
+    };
+
+    /**
+     * Main Application State & Router
+     */
+    const App = {
+      state: {
+        currentModule: 1,
+        completed: [1],
+        studentId: '',
+        quizAttempts: []
+      },
+
+      init: function() {
+        const saved = localStorage.getItem('AMA1751_Topic6_State');
+        if (saved) {
+          try { Object.assign(this.state, JSON.parse(saved)); } catch (e) {}
+        }
+        document.getElementById('student-id-input').value = this.state.studentId || '';
+        this.renderNav();
+        this.loadModule(this.state.currentModule || 1);
+      },
+
+      saveState: function() {
+        localStorage.setItem('AMA1751_Topic6_State', JSON.stringify(this.state));
+      },
+
+      saveStudentProfile: function() {
+        this.state.studentId = document.getElementById('student-id-input').value.trim();
+        this.saveState();
+      },
+
+      resetProgress: function() {
+        if (!confirm('Reset all saved progress and quiz records in this browser?')) return;
+        localStorage.removeItem('AMA1751_Topic6_State');
+        location.reload();
+      },
+
+      renderNav: function() {
+        const nav = document.getElementById('nav-list');
+        nav.innerHTML = MODULES.map(m => {
+          const isCurrent = m.id === this.state.currentModule;
+          const isDone = this.state.completed.includes(m.id);
+          return `
+            <button onclick="App.loadModule(${m.id})"
+              class="w-full text-left px-3.5 py-2.5 rounded-lg flex items-center justify-between transition text-xs font-medium ${
+                isCurrent ? 'bg-polyu text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
+              }">
+              <div class="truncate pr-2">
+                <div class="font-semibold truncate">${m.title}</div>
+                <div class="text-[11px] ${isCurrent ? 'text-rose-100' : 'text-slate-400'}">Slides ${m.slides}</div>
+              </div>
+              <div class="shrink-0">
+                ${isDone 
+                  ? `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full ${isCurrent ? 'bg-white text-polyu' : 'bg-emerald-100 text-emerald-700'}">✓</span>`
+                  : `<span class="inline-block w-2 h-2 rounded-full ${m.status === 'ready' ? 'bg-amber-400' : 'bg-slate-300'}"></span>`
+                }
+              </div>
+            </button>
+          `;
+        }).join('');
+
+        const doneCount = this.state.completed.length;
+        document.getElementById('progress-text').textContent = `${doneCount} / ${MODULES.length} Modules`;
+        document.getElementById('progress-bar').style.width = `${(doneCount / MODULES.length) * 100}%`;
+        lucide.createIcons();
+      },
+
+      loadModule: function(id) {
+        this.state.currentModule = id;
+        this.saveState();
+        this.renderNav();
+
+        const mod = MODULES.find(m => m.id === id);
+        document.getElementById('current-module-badge').textContent = `Module ${mod.id}`;
+        document.getElementById('current-module-title').textContent = mod.title.replace(/^\d+\.\s*/, '');
+        document.getElementById('current-slides-ref').textContent = `Lecture Notes: ${mod.slides} / 55`;
+
+        document.getElementById('prev-btn').disabled = (id <= 1);
+        document.getElementById('next-btn').disabled = (id >= MODULES.length);
+
+        const viewport = document.getElementById('module-viewport');
+        if (ModuleRenderers[id]) {
+          viewport.innerHTML = ModuleRenderers[id]();
+          if (id === 1) M1.init();
+        } else {
+          viewport.innerHTML = `
+            <div class="bg-white rounded-xl border border-slate-200 p-10 text-center space-y-4">
+              <div class="w-12 h-12 rounded-full bg-polyu-light text-polyu flex items-center justify-center mx-auto font-bold text-lg">${mod.id}</div>
+              <h3 class="text-xl font-bold text-slate-800">${mod.title}</h3>
+              <p class="text-sm text-slate-600 max-w-xl mx-auto">
+                Ready for step-by-step expansion (${mod.slides}). In our next step, we will plug in the interactive visualizers, proofs, worked examples, and SymPy/NumPy labs for this module!
+              </p>
+            </div>
+          `;
+        }
+        this.renderMath(viewport);
+        lucide.createIcons();
+        viewport.scrollTop = 0;
+      },
+
+      navigate: function(delta) {
+        const next = this.state.currentModule + delta;
+        if (next >= 1 && next <= MODULES.length) this.loadModule(next);
+      },
+
+      markCurrentCompleted: function() {
+        if (!this.state.completed.includes(this.state.currentModule)) {
+          this.state.completed.push(this.state.currentModule);
+          this.saveState();
+          this.renderNav();
+        }
+      },
+
+      renderMath: function(el) {
+        if (window.renderMathInElement) {
+          renderMathInElement(el || document.body, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+          });
+        }
+      },
+
+      copyCode: function(id) {
+        const text = document.getElementById(id).innerText;
+        navigator.clipboard.writeText(text);
+        alert('Python code copied to clipboard!');
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
